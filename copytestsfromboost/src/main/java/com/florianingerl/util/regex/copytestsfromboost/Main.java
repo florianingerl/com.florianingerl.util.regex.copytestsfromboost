@@ -12,7 +12,7 @@ import java.io.FileInputStream;
  */
 public class Main
 {
-	static Pattern pTestFunctions = Pattern.compile("\\bvoid\\s+(?=[a-zA-Z])(?<functionName>\\w*?test\\w*)\\s*\\(\\s*\\)\\s*(?<functionBody>\\{(//.*(\r)?\n|/\\*[\\s\\S]*?\\*/|\"(\\\\.|[^\"\\\\]+)*\"|[^\"{}/]+|(?functionBody))*+\\})");
+	static Pattern pTestFunctions = Pattern.compile("\\bvoid\\s+(?=[a-zA-Z])(?<functionName>\\w*?test\\w*)\\s*\\(\\s*\\)\\s*(?<functionBody>\\{(//.*(\r)?\n|/\\*[\\s\\S]*?\\*/|\"(?:\\\\.|[^\"\\\\]+)*\"|[^\"{}/]+|(?functionBody))*+\\})");
 
 	static Pattern p = Pattern.compile("TEST_REGEX_SEARCH\\s*\\(\\s*(?<regex>(?<javaString>\"(\\\\.|[^\"])*\"))\\s*,\\s*(?<options>((perl|icase|nosubs)\\s*(\\||(?=,)))+),\\s*(?<input>(?javaString))\\s*,\\s*(?<otheroptions>((match_default|match_not_dot_newline|match_single_line|match_no_subs)\\s*(\\||(?=,)))+),\\s*make_array\\s*\\((?<array>[^)]+)\\)\\s*\\)\\s*;");
 	
@@ -118,6 +118,40 @@ public class Main
 		sb.append("		if( m.find() )++failCount;\n");
 		sb.append("	}\n");
 	}
+	
+	static String adaptRegex(String regex){
+		if(containsRelativeBackReference(regex) ) return null;
+		regex = adaptWrongBackReferences(regex);
+		regex = adaptWrongNamedGroups(regex);
+		regex = adaptWrongCommentaries(regex);
+		return regex;
+	}
+	
+	private static String adaptWrongBackReferences(String regex){
+		Pattern p = Pattern.compile("\\\\g((?<groupNumber>\\d+)|\\{(?groupNumber)\\})");
+		Matcher m = p.matcher(regex);
+		regex = m.replaceAll("\\\\${groupNumber}");
+		p = Pattern.compile("\\\\g\\{(?<groupName>[a-zA-Z][a-zA-Z0-9]*)\\}");
+		m = p.matcher(regex);
+		return m.replaceAll("\\\\k<${groupName}>");
+	}
+	
+	private static String adaptWrongNamedGroups(String regex){
+		Pattern p = Pattern.compile("\\(\\?'(?<groupName>[a-zA-Z][a-zA-Z0-9]*)'");
+		Matcher m = p.matcher(regex);
+		return m.replaceAll("(?<${groupName}>");
+	}
+	
+	private static String adaptWrongCommentaries(String regex){
+		Pattern p = Pattern.compile("\\(\\?#(?<comment>.*?)\\)");
+		Matcher m = p.matcher(regex);
+		return m.replaceAll("(?x:#${comment}\n)");
+	}
+	
+	private static boolean containsRelativeBackReference(String regex){
+		return Pattern.compile("\\\\g(-\\d+|\\{-\\d+\\})").matcher(regex).find();
+	}
+	
 	
 		
 	

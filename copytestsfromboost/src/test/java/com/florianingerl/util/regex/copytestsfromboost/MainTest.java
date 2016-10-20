@@ -65,5 +65,64 @@ public class MainTest
 		assertTrue(i == 4 );
 		
 	}
+	
+	@Test
+	public void test4()
+	{
+		java.util.regex.Pattern p = java.util.regex.Pattern.compile("^(([^b])|([^b]{2})){2}b$");
+		java.util.regex.Matcher m = p.matcher("xyzb");
+		
+		assertTrue(m.find() );
+		
+		assertEquals("yz", m.group(1));
+		assertEquals("x", m.group(2) );
+		assertEquals("yz", m.group(3) );
+	
+	}
     
+	@Test
+	public void test5()
+	{
+		Pattern p = Pattern.compile("^(([^b])|([^b]{2})){2}b$");
+		Matcher m = p.matcher("xyzb");
+		
+		assertTrue(m.find() );
+		
+		assertEquals("yz", m.group(1));
+		assertEquals("x", m.group(2) );
+		assertEquals("yz", m.group(3) );
+	
+	}
+	
+	@Test
+	public void test6(){
+		String regex = "([\"'])a\\g1";
+		assertEquals("([\"'])a\\1", Main.adaptRegex(regex) );
+		regex = "([\"'])a\\g{1}";
+		assertEquals("([\"'])a\\1", Main.adaptRegex(regex) );
+		regex = "(?<h83group>[\"'])a\\g{h83group}";
+		assertEquals("(?<h83group>[\"'])a\\k<h83group>", Main.adaptRegex(regex) );
+	}
+	
+	@Test
+	public void test7(){
+		String regex = "([\"'])a\\g-1";
+		assertTrue( Main.adaptRegex(regex) == null );
+		regex = "([\"'])a\\g{-1}";
+		assertTrue( Main.adaptRegex(regex) == null );
+		regex = "([\"'])a\\g1";
+		assertTrue( Main.adaptRegex(regex) != null );
+	}
+	
+	@Test
+	public void test8(){
+		String regex = "(?'h83group'a|b)";
+		assertEquals("(?<h83group>a|b)", Main.adaptRegex(regex) );
+	}
+	
+	@Test
+	public void test9(){
+		String regex = "(?# this is the first alternative)a|(?# this is the second alternative)b";
+		assertEquals("(?x:# this is the first alternative\n)a|(?x:# this is the second alternative\n)b", Main.adaptRegex(regex) );
+	}
 }
