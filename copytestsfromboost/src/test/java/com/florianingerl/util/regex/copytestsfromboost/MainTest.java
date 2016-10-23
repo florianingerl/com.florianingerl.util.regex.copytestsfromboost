@@ -123,6 +123,69 @@ public class MainTest
 	@Test
 	public void test9(){
 		String regex = "(?# this is the first alternative)a|(?# this is the second alternative)b";
-		assertEquals("(?x:# this is the first alternative\n)a|(?x:# this is the second alternative\n)b", Main.adaptRegex(regex) );
+		System.err.println(Main.adaptRegex(regex) );
+		assertEquals("(?x:# this is the first alternative\\n)a|(?x:# this is the second alternative\\n)b", Main.adaptRegex(regex) );
+	}
+	
+	@Test
+	public void test10(){
+		String regex = "\\<Beginning End\\>";
+		assertEquals("\\bBeginning End\\b", Main.adaptRegex(regex) );
+	}
+	
+	@Test
+	public void test11(){
+		String regex = "[><a-z]";
+		assertEquals(regex, Main.adaptRegex(regex) );
+		regex = "(?<!negative lookbehind)(?<=positive lookbehind)";
+		assertEquals(regex, Main.adaptRegex(regex) );
+		regex = "(?<namedGroup>This is a named group)";
+		assertEquals(regex, Main.adaptRegex(regex) ); 
+		regex = "\\k<namedGroup>";
+		assertEquals(regex, Main.adaptRegex(regex) ); 
+		regex = "(?(<namedGroup>)condition based on valid group capture)";
+		assertEquals("(?(namedGroup)condition based on valid group capture)", Main.adaptRegex(regex) );
+		regex = "some free < and > signs";
+		assertEquals("some free \\< and \\> signs", Main.adaptRegex(regex) );
+	}
+	
+	@Test
+	public void test12(){
+		String regex = "(?&someName) and escaped \\(?&someName) and not escaped \\\\(?&someOtherName)";
+		assertEquals("(?someName) and escaped \\(?&someName) and not escaped \\\\(?someOtherName)", Main.adaptRegex(regex) );
+	}
+	
+	@Test
+	public void test13(){
+		String regex = "(?-24)";
+		assertTrue( Main.adaptRegex(regex) == null );
+		regex = "(?+345)";
+		assertTrue( Main.adaptRegex(regex) == null );
+		regex = "(?R)";
+		assertTrue( Main.adaptRegex(regex) == null );
+		regex = "(?0)";
+		assertTrue( Main.adaptRegex(regex) == null );
+	}
+	
+	@Test
+	public void test14(){
+		String regex = "(?('groupname')condA|condB)";
+		assertEquals("(?(groupname)condA|condB)", Main.adaptRegex(regex) );
+		regex = "(?(<groupname>)condA|condB)";
+		assertEquals("(?(groupname)condA|condB)", Main.adaptRegex(regex) );
+	}
+	
+	@Test
+	public void test15(){
+		String regex = "(?(?!assert)yes|no)";
+		assertTrue( Main.adaptRegex(regex) == null );
+		regex = "(?(DEFINE)(?<groupName>[a-zA-Z][a-zA-Z0-9]*))";
+		assertTrue( Main.adaptRegex(regex) == null );
+		regex = "(?(R&groupName)yes|no)";
+		assertTrue( Main.adaptRegex(regex) == null );
+		regex = "(?(R345)yes|no)";
+		assertTrue( Main.adaptRegex(regex) == null );
+		
+		
 	}
 }
