@@ -146,7 +146,7 @@ public class MainTest
 		regex = "(?(<namedGroup>)condition based on valid group capture)";
 		assertEquals("(?(namedGroup)condition based on valid group capture)", Main.adaptRegex(regex) );
 		regex = "some free < and > signs";
-		assertEquals("some free \\< and \\> signs", Main.adaptRegex(regex) );
+		assertEquals("some free \\\\< and \\\\> signs", Main.adaptRegex(regex) );
 	}
 	
 	@Test
@@ -187,5 +187,24 @@ public class MainTest
 		assertTrue( Main.adaptRegex(regex) == null );
 		
 		
+	}
+	
+	
+	@Test
+	public void test16(){
+		assertTrue( Pattern.compile(":").matcher(":").find() );
+	
+		String regex = "[[:xdigit]]";
+		assertEquals("\\p{XDigit}", Main.adaptRegex(regex) );
+		regex = "[[:word]]";
+		assertEquals("\\w", Main.adaptRegex(regex) );
+		regex = "[^[:word]]";
+		assertEquals("\\W", Main.adaptRegex(regex) );
+		regex = "[^[:alnum]]";
+		assertEquals("[^\\p{Alnum}]", Main.adaptRegex(regex) );
+		regex = "[[:lower]]";
+		assertEquals("\\p{Lower}", Main.adaptRegex(regex) );
+		regex = "[[:blank:]] [[:print:]]";
+		assertEquals("\\p{Blank} \\p{Print}", Main.adaptRegex(regex));
 	}
 }

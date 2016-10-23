@@ -6,6 +6,7 @@ import java.io.IOException;
 import org.apache.commons.io.IOUtils;
 import java.io.PrintWriter;
 import java.io.FileInputStream;
+import java.io.File;
 /**
  * Hello world!
  *
@@ -14,20 +15,28 @@ public class Main
 {
 	private static final String NO_ESCAPE = "(?<!(?<!\\\\)\\\\(\\\\{2}){0,10})";
 
-	static Pattern pTestFunctions = Pattern.compile("\\bvoid\\s+(?=[a-zA-Z])(?<functionName>\\w*?test\\w*)\\s*\\(\\s*\\)\\s*(?<functionBody>\\{(//.*(\r)?\n|/\\*[\\s\\S]*?\\*/|\"(?:\\\\.|[^\"\\\\]+)*\"|[^\"{}/]+|(?functionBody))*+\\})");
+	static Pattern pTestFunctions = Pattern.compile("\\bvoid\\s++(?=[a-zA-Z])(?<functionName>(?>\\w*?test\\w*))\\s*+\\(\\s*+\\)\\s*+(?<functionBody>\\{(//.*+(\r)?\n|/\\*[\\s\\S]*?\\*/|\"(?:\\\\.|[^\"\\\\]++)*+\"|[^\"{}/]++|(?functionBody))*+\\})");
 
 	static Pattern p = Pattern.compile("TEST_REGEX_SEARCH\\s*\\(\\s*(?<regex>(?<javaString>\"(\\\\.|[^\"])*\"))\\s*,\\s*(?<options>((perl|icase|nosubs)\\s*(\\||(?=,)))+),\\s*(?<input>(?javaString))\\s*,\\s*(?<otheroptions>((match_default|match_not_dot_newline|match_single_line|match_no_subs)\\s*(\\||(?=,)))+),\\s*make_array\\s*\\((?<array>[^)]+)\\)\\s*\\)\\s*;");
+	
+	private static final File boostDir = new File("C:/Software/boost.regex");
+	
+	private static final String [] testFiles = new String[]{ "test/regress/basic_tests.cpp", "test/regress/test_tricky_cases.cpp" };
 	
     public static void main( String[] args )
     {
 		try{
 			
-			String cpp_file_content = IOUtils.toString( new FileInputStream("C:/Software/boost.regex/test/regress/basic_tests.cpp") ); 
-			System.out.println(cpp_file_content);
+			
 			
 			StringBuilder sbMain = new StringBuilder("\tpublic static void main(String [] args){\n");
 			
 			StringBuilder sbFunctions = new StringBuilder();
+			
+			for(String testFile : testFiles){
+			
+			String cpp_file_content = IOUtils.toString( new FileInputStream(new File(boostDir, testFile) ) ); 
+			System.out.println(cpp_file_content);
 			
 			Matcher mTestFunctions = pTestFunctions.matcher(cpp_file_content);
 		
@@ -57,14 +66,19 @@ public class Main
 				sbFunctions.append("\t}\n\n");
 			}
 			
+			}
+			
 			sbMain.append("\t\tif(failure){throw new RuntimeException(\"RegExTest failed, 1st failure: \" + firstFailure); }\n");
 			sbMain.append("\t\telse{System.err.println(\"OKAY: All tests passed.\");}\n\t}\n");
 			
 			StringBuilder sbClass = new StringBuilder("package com.florianingerl.util.regex;\n");
+			sbClass.append("import static org.junit.Assert.assertTrue;\n");
+			sbClass.append("import org.junit.Test;\n");
 			sbClass.append("public class BoostRegExTest {\n\n");
 			sbClass.append("\tprivate static boolean failure = false;\n");
 			sbClass.append("\tprivate static int failCount = 0;\n");
 			sbClass.append("\tprivate static String firstFailure = null;\n\n");
+			appendCallMainFunction(sbClass);
 			sbClass.append(sbMain);
 			appendReportFunction(sbClass);
 			appendCheckFunction(sbClass);
@@ -81,6 +95,17 @@ public class Main
 			System.out.println(e.getMessage() );
 		}
     }
+	
+	private static void appendCallMainFunction(StringBuilder sb){
+		sb.append("	@Test\n");
+		sb.append("	public void callMain() {\n");
+		sb.append("		try {\n");
+		sb.append("			main(null);\n");
+		sb.append("		} catch (Exception e) {\n");
+		sb.append("			assertTrue(e.getMessage(), false);\n");
+		sb.append("		}\n");
+		sb.append("	}\n");	
+	}
 	
 	private static void appendReportFunction(StringBuilder sb){
 		sb.append("	private static void report(String testName) {\n");
@@ -134,6 +159,7 @@ public class Main
 		regex = escapeGreaterAndSmallerSigns(regex);
 		regex = adaptWrongRecursion(regex);
 		regex = adaptWrongConditionalBasedOnValidGroupCapture(regex);
+		regex = adaptCharacterClasses(regex);
 		return regex;
 	}
 	
@@ -178,7 +204,7 @@ public class Main
 		
 		return m.replaceAll( (Matcher matcher) -> { 
 			if(matcher.group().startsWith("<") || matcher.group().startsWith(">") ){
-				return "\\" + matcher.group();
+				return "\\\\" + matcher.group();
 			}
 			return matcher.group();
 			} );
@@ -200,6 +226,32 @@ public class Main
 		return Pattern.compile(NO_ESCAPE + "\\(\\?\\((\\?\\!|DEFINE(?=\\))|R&(?<groupName>[a-zA-Z][a-zA-Z0-9]*)(?=\\))|R\\d+(?=\\)))").matcher(regex).find();
 	}
 		
+	private static String adaptCharacterClasses(String regex){
+		Pattern p = Pattern.compile(NO_ESCAPE + "\\[(?<not>\\^)?\\[:(?<class>lower|upper|alpha|digit|alnum|punct|graph|print|blank|cntrl|space):\\]\\]");
+		Matcher m = p.matcher(regex);
+		
+		regex = m.replaceAll( (Matcher matcher) -> {
+			
+			String r = "\\\\p{" + Character.toUpperCase( matcher.group("class").charAt(0) ) + matcher.group("class").substring(1) + "}"; 
+			if( matcher.start("not") != -1 ) r = "[^" + r + "]";
+			return r;
+			});
+			
+		p = Pattern.compile(NO_ESCAPE + "\\[(?<not>\\^)?\\[:(?<class>word|xdigit):\\]\\]");
+		return p.matcher(regex).replaceAll( (Matcher matcher) -> {
+			if(matcher.group().contains("word") ){
+			if(matcher.start("not") != -1)
+				return "\\\\W";
+			else
+				return "\\\\w"; }
+			else{
+				if(matcher.start("not") != -1)
+				return "[^\\\\p{XDigit}]";
+			else
+				return "\\\\p{XDigit}"; 
+			}
+		} );
+	}
 	
 	
 }
