@@ -61,7 +61,6 @@ public class MainTest
 			++i;
 		}
 		
-		System.out.println("com.florianingerl.util.regex.Matcher found " + i + " matches!");
 		assertTrue(i == 4 );
 		
 	}
@@ -123,7 +122,6 @@ public class MainTest
 	@Test
 	public void test9(){
 		String regex = "(?# this is the first alternative)a|(?# this is the second alternative)b";
-		System.err.println(Main.adaptRegex(regex) );
 		assertEquals("(?x:# this is the first alternative\\n)a|(?x:# this is the second alternative\\n)b", Main.adaptRegex(regex) );
 	}
 	
@@ -151,8 +149,8 @@ public class MainTest
 	
 	@Test
 	public void test12(){
-		String regex = "(?&someName) and escaped \\(?&someName) and not escaped \\\\(?&someOtherName)";
-		assertEquals("(?someName) and escaped \\(?&someName) and not escaped \\\\(?someOtherName)", Main.adaptRegex(regex) );
+		String regex = "(?<someName>hello)(?&someName) and escaped \\(?&someName) and not escaped \\\\(?&someName)";
+		assertEquals("(?<someName>hello)(?someName) and escaped \\(?&someName) and not escaped \\\\(?someName)", Main.adaptRegex(regex) );
 	}
 	
 	@Test
@@ -192,19 +190,33 @@ public class MainTest
 	
 	@Test
 	public void test16(){
-		assertTrue( Pattern.compile(":").matcher(":").find() );
-	
-		String regex = "[[:xdigit]]";
-		assertEquals("\\p{XDigit}", Main.adaptRegex(regex) );
-		regex = "[[:word]]";
-		assertEquals("\\w", Main.adaptRegex(regex) );
-		regex = "[^[:word]]";
-		assertEquals("\\W", Main.adaptRegex(regex) );
-		regex = "[^[:alnum]]";
-		assertEquals("[^\\p{Alnum}]", Main.adaptRegex(regex) );
-		regex = "[[:lower]]";
-		assertEquals("\\p{Lower}", Main.adaptRegex(regex) );
+		String regex = "[[:xdigit:]]";
+		assertEquals("\\\\p{XDigit}", Main.adaptRegex(regex) );
+		regex = "[[:word:]]";
+		assertEquals("\\\\w", Main.adaptRegex(regex) );
+		regex = "[^[:word:]]";
+		assertEquals("\\\\W", Main.adaptRegex(regex) );
+		regex = "[^[:alnum:]]";
+		assertEquals("[^\\\\p{Alnum}]", Main.adaptRegex(regex) );
+		regex = "[[:lower:]]";
+		assertEquals("\\\\p{Lower}", Main.adaptRegex(regex) );
 		regex = "[[:blank:]] [[:print:]]";
-		assertEquals("\\p{Blank} \\p{Print}", Main.adaptRegex(regex));
+		assertEquals("\\\\p{Blank} \\\\p{Print}", Main.adaptRegex(regex));
+	}
+	
+	@Test
+	public void test17(){
+		String regex = "(?1)\\s*\\+\\s*(\"(\\\\.|[^\"])*\")";
+		
+		assertTrue( Main.adaptRegex(regex) == null );
+		
+		regex = "(?javaString)\\s*\\+\\s*(?<javaString>\"(\\\\.|[^\"])*\")";
+		
+		assertTrue( Main.adaptRegex(regex) == null );
+	}
+	
+	@Test
+	public void testEmptyAlternative(){
+		Pattern.compile("|c");
 	}
 }

@@ -21,7 +21,7 @@ public class Main
 	
 	private static final File boostDir = new File("C:/Software/boost.regex");
 	
-	private static final String [] testFiles = new String[]{ "test/regress/basic_tests.cpp", "test/regress/test_tricky_cases.cpp" };
+	private static final String [] testFiles = new String[]{ "test/regress/basic_tests.cpp", "test/regress/test_tricky_cases.cpp", "test/regress/test_alt.cpp" };
 	
     public static void main( String[] args )
     {
@@ -160,6 +160,7 @@ public class Main
 		regex = adaptWrongRecursion(regex);
 		regex = adaptWrongConditionalBasedOnValidGroupCapture(regex);
 		regex = adaptCharacterClasses(regex);
+		if(containsRecursionToGroupThatsNotYetDeclared(regex) ) return null;
 		return regex;
 	}
 	
@@ -251,6 +252,42 @@ public class Main
 				return "\\\\p{XDigit}"; 
 			}
 		} );
+	}
+	
+	private static boolean containsRecursionToGroupThatsNotYetDeclared(String regex){
+		if( containsRecursionToNumberedGroupThatsNotYetDeclared(regex) ) return true;
+		if( containsRecursionToNamedGroupThatsNotYetDeclared(regex) ) return true;
+		return false;
+	}
+	
+	private static boolean containsRecursionToNumberedGroupThatsNotYetDeclared(String regex){
+		Pattern p = Pattern.compile(NO_ESCAPE + "\\(\\?(?<groupNumber>\\d+)\\)");
+		Matcher m = p.matcher(regex);
+		
+		Pattern p2 = Pattern.compile( "^(" + NO_ESCAPE + "(?<capturingGroup>\\((?:\\?\\<[a-zA-Z][a-zA-Z0-9]*\\>|(?!\\?)))|[\\s\\S])*$" );
+		while(m.find() ){
+			String subregex = regex.substring(0, m.start() );
+			Matcher m2 = p2.matcher(subregex);
+			if(! m2.find() ) throw new RuntimeException("The regex should always match!");
+			if( m2.captures("capturingGroup").size() < Integer.parseInt( m.group("groupNumber") ) )
+				return true;
+			
+		}
+	
+		return false;
+	}
+	
+	private static boolean containsRecursionToNamedGroupThatsNotYetDeclared(String regex){
+		Pattern p = Pattern.compile(NO_ESCAPE + "\\(\\?(?<groupName>[a-zA-Z][a-zA-Z0-9]*)\\)");
+		Matcher m = p.matcher(regex);
+		
+		while(m.find() ){
+			String subregex = regex.substring(0, m.start() );
+			Pattern p2 = Pattern.compile(NO_ESCAPE + "\\(\\?\\<"+ m.group("groupName") + "\\>"); 
+			if(! p2.matcher(subregex).find() ) return true;
+		}
+		
+		return false;
 	}
 	
 	
