@@ -13,16 +13,16 @@ import java.io.File;
  */
 public class Main
 {
-	private static final String NO_ESCAPE = "(?<!(?<!\\\\)\\\\(\\\\{2}){0,10})";
+	private static final String NO_ESCAPE = "(?<!(?<!\\\\{2})\\\\{2}(\\\\{4}){0,10})";
 
 	static Pattern pTestFunctions = Pattern.compile("\\bvoid\\s++(?=[a-zA-Z])(?<functionName>(?>\\w*?test\\w*))\\s*+\\(\\s*+\\)\\s*+(?<functionBody>\\{(//.*+(\r)?\n|/\\*[\\s\\S]*?\\*/|\"(?:\\\\.|[^\"\\\\]++)*+\"|[^\"{}/]++|(?functionBody))*+\\})");
 
-	static Pattern pTestRegexSearch = Pattern.compile("TEST_REGEX_SEARCH\\s*\\(\\s*(?<regex>(?<javaString>\"(\\\\.|[^\"])*\"))\\s*,\\s*(?<options>((perl|icase|nosubs|no_mod_m|no_mod_s|mod_s|mod_x)\\s*(\\||(?=,)))+),\\s*(?<input>(?javaString))\\s*,\\s*(?<otheroptions>((match_default|match_not_dot_newline|match_single_line|match_no_subs)\\s*(\\||(?=,)))+),\\s*make_array\\s*\\((?<array>[^)]+)\\)\\s*\\)\\s*;");
-	static Pattern pInvalidRegex = Pattern.compile("TEST_INVALID_REGEX\\s*\\(\\s*(?<regex>(?<javaString>\"(\\\\.|[^\"])*\"))\\s*,\\s*(?<options>((perl|icase|nosubs|no_mod_m|no_mod_s|mod_s|mod_x)\\s*(\\||(?=\\))))+)\\)\\s*;");
+	static Pattern pTestRegexSearch = Pattern.compile("/\\*[\\s\\S]*?\\*/|//.*(\r)?\n|TEST_REGEX_SEARCH\\s*\\(\\s*(?<regex>(?<javaString>\"(\\\\.|[^\"])*\"))\\s*,\\s*(?<options>((perl|icase|nosubs|no_mod_m|no_mod_s|mod_s|mod_x)\\s*(\\||(?=,)))+),\\s*(?<input>(?javaString))\\s*,\\s*(?<otheroptions>((match_default|match_not_dot_newline|match_single_line|match_no_subs)\\s*(\\||(?=,)))+),\\s*make_array\\s*\\((?<array>[^)]+)\\)\\s*\\)\\s*;");
+	static Pattern pInvalidRegex = Pattern.compile("/\\*[\\s\\S]*?\\*/|//.*(\r)?\n|TEST_INVALID_REGEX\\s*\\(\\s*(?<regex>(?<javaString>\"(\\\\.|[^\"])*\"))\\s*,\\s*(?<options>((perl|icase|nosubs|no_mod_m|no_mod_s|mod_s|mod_x)\\s*(\\||(?=\\))))+)\\)\\s*;");
 	
 	private static final File boostDir = new File("C:/Software/boost.regex");
 	
-	private static final String [] testFiles = new String[]{ "test/regress/basic_tests.cpp", "test/regress/test_tricky_cases.cpp", "test/regress/test_alt.cpp" };
+	private static final String [] testFiles = new String[]{ "test/regress/basic_tests.cpp", "test/regress/test_tricky_cases.cpp", "test/regress/test_alt.cpp", "test/regress/test_simple_repeats.cpp", "test/regress/test_perl_ex.cpp", "test/regress/test_non_greedy_repeats.cpp", "test/regress/test_grep.cpp", "test/regress/test_backrefs.cpp" };
 	
     public static void main( String[] args )
     {
@@ -39,6 +39,7 @@ public class Main
 			Matcher mTestFunctions = pTestFunctions.matcher(cpp_file_content);
 		
 			while(mTestFunctions.find() ){
+				if( mTestFunctions.group("functionName").equals("test_verbs") ) continue;
 				System.out.println(mTestFunctions.group() );
 		
 				sbMain.append("\t\t"+ mTestFunctions.group("functionName") + "();\n");
@@ -50,6 +51,7 @@ public class Main
 				Matcher m = pTestRegexSearch.matcher(functionBody);
 				
 				while(m.find() ){
+					if(! m.group().startsWith("TEST") ) continue;
 					if(! isValidArray( m.group("array") ) ) continue;
 					String regex = Main.adaptRegex(m.group("regex") );
 					if(regex == null) continue;
@@ -61,6 +63,7 @@ public class Main
 				Matcher m2 = pInvalidRegex.matcher(functionBody);
 				
 				while(m2.find() ){
+					if(! m2.group().startsWith("TEST") ) continue;
 					String regex = Main.adaptRegex(m2.group("regex") );
 					if(regex == null) continue;
 					sbFunctions.append("\t\tcheckExpectedFail(").append( regex ).append(",");
@@ -111,7 +114,7 @@ public class Main
 			sb.append("|Pattern.MULTILINE");
 		if( !options.contains("no_mod_s") && (otherOptions == null || !otherOptions.contains("match_not_dot_newline") ) )
 			sb.append("|Pattern.DOTALL");
-		if(options.contains("mod-x") )
+		if(options.contains("mod_x") )
 			sb.append("|Pattern.COMMENTS");
 	}
 	
@@ -198,18 +201,18 @@ public class Main
 		return regex;
 	}
 	
-	private static final Pattern pRelativeBackReference = Pattern.compile(NO_ESCAPE + "\\\\g(-\\d+|\\{-\\d+\\})");
+	private static final Pattern pRelativeBackReference = Pattern.compile(NO_ESCAPE + "\\\\{2}g(-\\d+|\\{-\\d+\\})");
 	private static boolean containsRelativeBackReference(String regex){
 		return pRelativeBackReference.matcher(regex).find();
 	}
 	
-	private static final Pattern pWrongBackReference = Pattern.compile(NO_ESCAPE + "\\\\g((?<groupNumber>\\d+)|\\{(?groupNumber)\\})");
-	private static final Pattern pWrongBackReference2 = Pattern.compile(NO_ESCAPE + "\\\\g\\{(?<groupName>[a-zA-Z][a-zA-Z0-9]*)\\}");
+	private static final Pattern pWrongBackReference = Pattern.compile(NO_ESCAPE + "\\\\{2}g((?<groupNumber>\\d+)|\\{(?groupNumber)\\})");
+	private static final Pattern pWrongBackReference2 = Pattern.compile(NO_ESCAPE + "\\\\{2}g\\{(?<groupName>[a-zA-Z][a-zA-Z0-9]*)\\}");
 	private static String adaptWrongBackReferences(String regex){
 		Matcher m = pWrongBackReference.matcher(regex);
-		regex = m.replaceAll("\\\\${groupNumber}");
+		regex = m.replaceAll( "\\\\\\\\${groupNumber}" );
 		m = pWrongBackReference2.matcher(regex);
-		return m.replaceAll("\\\\k<${groupName}>");
+		return m.replaceAll(  "\\\\\\\\k<${groupName}>" );
 	}
 	
 	private static final Pattern pWrongNamedGroups = Pattern.compile(NO_ESCAPE + "\\(\\?'(?<groupName>[a-zA-Z][a-zA-Z0-9]*)'");
@@ -221,22 +224,23 @@ public class Main
 	private static final Pattern pWrongCommentaries = Pattern.compile(NO_ESCAPE + "\\(\\?#(?<comment>[\\s\\S]*?)\\)");
 	private static String adaptWrongCommentaries(String regex){
 		Matcher m = pWrongCommentaries.matcher(regex);
-		return m.replaceAll("(?x:#${comment}\\\\n)");
+		return m.replaceAll( (Matcher matcher) -> { return "(?x:#" + matcher.group("comment").replaceAll("\\n", "") + "\\n)"; } );
 	}
 	
-	private static final Pattern pWrongWordBoundaries = Pattern.compile(NO_ESCAPE + "\\\\[><]"); 
+	private static final Pattern pWrongWordBoundaries = Pattern.compile(NO_ESCAPE + "\\\\{2}[><]"); 
 	private static String adaptWordBoundaries(String regex){
-		return pWrongWordBoundaries.matcher(regex).replaceAll("\\\\b");
+		return pWrongWordBoundaries.matcher(regex).replaceAll( (Matcher matcher) -> { return "\\\\b"; } );
 	}
 	
 	private static Pattern pGreaterAndSmallerSigns = null;
 	static {
 		String namedGroup = "\\(\\?\\<(?<groupName>[a-zA-Z][a-zA-Z0-9]*)\\>";
 		String conditionBasedOnValidGroupCapture = "\\(\\?\\(\\<(?groupName)\\>";
-		String backReference = "\\\\k\\<(?groupName)\\>";
-		String characterClass = "\\[(\\\\.|[^\\]])*\\]";
+		String backReference = "\\\\{2}k\\<(?groupName)\\>";
+		String characterClass = "\\[(\\\\{2}.|[^\\]])*\\]";
 		String lookbehind = "\\(\\?\\<[!=]";
-		pGreaterAndSmallerSigns = Pattern.compile(NO_ESCAPE + "(" + namedGroup + "|" + conditionBasedOnValidGroupCapture + "|" + backReference + "|" + characterClass + "|" + lookbehind + "|[><])");
+		String independentGroup = "\\Q(?>\\E";
+		pGreaterAndSmallerSigns = Pattern.compile(NO_ESCAPE + "(" + namedGroup + "|" + conditionBasedOnValidGroupCapture + "|" + backReference + "|" + characterClass + "|" + lookbehind + "|" + independentGroup + "|[><])");
 	}
 	
 	private static String escapeGreaterAndSmallerSigns(String regex){
@@ -266,7 +270,7 @@ public class Main
 		return pUnsupportedRecursion.matcher(regex).find();
 	}
 	
-	private static final Pattern pUnsupportedConditional = Pattern.compile(NO_ESCAPE + "\\(\\?\\((\\?\\!|DEFINE(?=\\))|R&(?<groupName>[a-zA-Z][a-zA-Z0-9]*)(?=\\))|R\\d+(?=\\)))");
+	private static final Pattern pUnsupportedConditional = Pattern.compile(NO_ESCAPE + "\\Q(?(\\E(\\?\\!|DEFINE(?=\\))|\\Q?<=\\E|\\Q?<!\\E|R&(?<groupName>[a-zA-Z][a-zA-Z0-9]*)(?=\\))|R\\d+(?=\\)))");
 	private static boolean containsUnsupportedConditional(String regex){
 		return pUnsupportedConditional.matcher(regex).find();
 	}
@@ -334,7 +338,7 @@ public class Main
 		return false;
 	}
 	
-	private static final String [] SPECIAL_PATTERNS = new String[]{ "\"[a-Z]+\"", "\"[[:lower:]]+\"", "\"[[:upper:]]+\"", "\"\\\\l+\"","\"\\\\u+\"" };
+	private static final String [] SPECIAL_PATTERNS = new String[]{ "\"[a-Z]+\"", "\"[[:lower:]]+\"", "\"[[:upper:]]+\"", "\"\\\\l+\"","\"\\\\u+\"", "\"a{ 2 , 4 }\"", "\"a{ 2 , }\"", "\"a{ 2 }\"", "\"a{12b\"" };
 	
 	private static boolean isSpecialRegex(String regex){
 		for(int i=0; i < SPECIAL_PATTERNS.length; ++i){
@@ -343,7 +347,7 @@ public class Main
 		return false;
 	}
 	
-	private static final Pattern pWrongUpperAndLowerCase = Pattern.compile(NO_ESCAPE + "\\\\\\\\(l|u)");
+	private static final Pattern pWrongUpperAndLowerCase = Pattern.compile(NO_ESCAPE + "\\\\{2}(l|u)");
 	private static String adaptWrongUpperAndLowerCase(String regex){
 		return pWrongUpperAndLowerCase.matcher(regex).replaceAll( (Matcher matcher) -> {
 			if(matcher.group().contains("l") ) return "\\\\p{Lower}";

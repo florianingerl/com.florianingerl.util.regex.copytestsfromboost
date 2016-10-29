@@ -96,21 +96,21 @@ public class MainTest
 	
 	@Test
 	public void test6(){
-		String regex = "([\"'])a\\g1";
-		assertEquals("([\"'])a\\1", Main.adaptRegex(regex) );
-		regex = "([\"'])a\\g{1}";
-		assertEquals("([\"'])a\\1", Main.adaptRegex(regex) );
-		regex = "(?<h83group>[\"'])a\\g{h83group}";
-		assertEquals("(?<h83group>[\"'])a\\k<h83group>", Main.adaptRegex(regex) );
+		String regex = "([\"'])a\\\\g1";
+		assertEquals("([\"'])a\\\\1", Main.adaptRegex(regex) );
+		regex = "([\"'])a\\\\g{1}";
+		assertEquals("([\"'])a\\\\1", Main.adaptRegex(regex) );
+		regex = "(?<h83group>[\"'])a\\\\g{h83group}";
+		assertEquals("(?<h83group>[\"'])a\\\\k<h83group>", Main.adaptRegex(regex) );
 	}
 	
 	@Test
 	public void test7(){
-		String regex = "([\"'])a\\g-1";
+		String regex = "([\"'])a\\\\g-1";
 		assertTrue( Main.adaptRegex(regex) == null );
-		regex = "([\"'])a\\g{-1}";
+		regex = "([\"'])a\\\\g{-1}";
 		assertTrue( Main.adaptRegex(regex) == null );
-		regex = "([\"'])a\\g1";
+		regex = "([\"'])a\\\\g1";
 		assertTrue( Main.adaptRegex(regex) != null );
 	}
 	
@@ -124,23 +124,27 @@ public class MainTest
 	public void test9(){
 		String regex = "(?# this is the first alternative)a|(?# this is the second alternative)b";
 		assertEquals("(?x:# this is the first alternative\\n)a|(?x:# this is the second alternative\\n)b", Main.adaptRegex(regex) );
+		regex = "(?# this is a \\n comment that spans \\n multiple lines)";
+		assertEquals("(?x:# this is a  comment that spans  multiple lines\\n)", Main.adaptRegex(regex) );
 	}
 	
 	@Test
 	public void test10(){
-		String regex = "\\<Beginning End\\>";
-		assertEquals("\\bBeginning End\\b", Main.adaptRegex(regex) );
+		String regex = "\\\\<Beginning End\\\\>";
+		assertEquals("\\\\bBeginning End\\\\b", Main.adaptRegex(regex) );
 	}
 	
 	@Test
 	public void test11(){
 		String regex = "[><a-z]";
 		assertEquals(regex, Main.adaptRegex(regex) );
+		regex = "(?>an independent group)";
+		assertEquals(regex, Main.adaptRegex(regex) );
 		regex = "(?<!negative lookbehind)(?<=positive lookbehind)";
 		assertEquals(regex, Main.adaptRegex(regex) );
 		regex = "(?<namedGroup>This is a named group)";
 		assertEquals(regex, Main.adaptRegex(regex) ); 
-		regex = "\\k<namedGroup>";
+		regex = "\\\\k<namedGroup>";
 		assertEquals(regex, Main.adaptRegex(regex) ); 
 		regex = "(?(<namedGroup>)condition based on valid group capture)";
 		assertEquals("(?(namedGroup)condition based on valid group capture)", Main.adaptRegex(regex) );
@@ -150,8 +154,8 @@ public class MainTest
 	
 	@Test
 	public void test12(){
-		String regex = "(?<someName>hello)(?&someName) and escaped \\(?&someName) and not escaped \\\\(?&someName)";
-		assertEquals("(?<someName>hello)(?someName) and escaped \\(?&someName) and not escaped \\\\(?someName)", Main.adaptRegex(regex) );
+		String regex = "(?<someName>hello)(?&someName) and escaped \\\\(?&someName) and not escaped \\\\\\\\(?&someName)";
+		assertEquals("(?<someName>hello)(?someName) and escaped \\\\(?&someName) and not escaped \\\\\\\\(?someName)", Main.adaptRegex(regex) );
 	}
 	
 	@Test
@@ -184,7 +188,10 @@ public class MainTest
 		assertTrue( Main.adaptRegex(regex) == null );
 		regex = "(?(R345)yes|no)";
 		assertTrue( Main.adaptRegex(regex) == null );
-		
+		regex = "(?(?<=hello)yes|no)";
+		assertTrue( Main.adaptRegex(regex) == null );
+		regex = "(?(?<!hello)yes|no)";
+		assertTrue( Main.adaptRegex(regex) == null );
 		
 	}
 	
