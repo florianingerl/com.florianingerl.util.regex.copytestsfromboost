@@ -4,6 +4,7 @@ import com.florianingerl.util.regex.*;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 import org.apache.commons.io.IOUtils;
 import java.io.PrintWriter;
@@ -32,7 +33,7 @@ public class MainTest
 	@Test
 	public void TEST_REGEX_SEARCH_RegexTest()
 	{
-		Matcher m = Main.p.matcher("TEST_REGEX_SEARCH(\"(a)\", perl, \"zzzaazz\", match_default, make_array(3, 4, 3, 4, -2, 4, 5, 4, 5, -2, -2));");
+		Matcher m = Main.pTestRegexSearch.matcher("TEST_REGEX_SEARCH(\"(a)\", perl, \"zzzaazz\", match_default, make_array(3, 4, 3, 4, -2, 4, 5, 4, 5, -2, -2));");
 		
 		assertTrue(m.find() );
 		
@@ -218,5 +219,35 @@ public class MainTest
 	@Test
 	public void testEmptyAlternative(){
 		Pattern.compile("|c");
+	}
+	
+	@Test
+	public void test18(){
+		assertTrue( Main.adaptRegex("\"[a-Z]+\"") == null );
+	}
+	
+	@Test
+	public void test19(){
+		assertTrue( Main.adaptRegex("(a)(?|x(y)z|(p(q)r)|(t)u(v))(z)") == null );
+	}
+	
+	@Test
+	public void test20(){
+		assertTrue( Main.isValidArray("4, 5, -2, 5, 6, -2, -2") );
+		assertFalse( Main.isValidArray("0, 0, 0, 0, -2, 1, 1, 1, 1, -2, 1, 2, 1, 2, -2, 2, 2, 2, 2, -2, -2") );
+	}
+	
+	@Test
+	public void test21(){
+		String regex = "\\\\l++";
+		assertEquals( "\\\\p{Lower}++", Main.adaptRegex(regex) );
+		regex = "\\\\u++";
+		assertEquals( "\\\\p{Upper}++", Main.adaptRegex(regex) );
+	}
+	
+	@Test
+	public void test22(){
+		assertTrue( Main.adaptRegex("\"\\\\l+\"") == null );
+		assertTrue( Main.adaptRegex("\"\\\\u+\"") == null );
 	}
 }
