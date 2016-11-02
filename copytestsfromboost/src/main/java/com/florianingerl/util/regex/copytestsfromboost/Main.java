@@ -224,7 +224,7 @@ public class Main
 	private static final Pattern pWrongCommentaries = Pattern.compile(NO_ESCAPE + "\\(\\?#(?<comment>[\\s\\S]*?)\\)");
 	private static String adaptWrongCommentaries(String regex){
 		Matcher m = pWrongCommentaries.matcher(regex);
-		return m.replaceAll( (Matcher matcher) -> { return "(?x:#" + matcher.group("comment").replaceAll("\\n", "") + "\\n)"; } );
+		return m.replaceAll( (Matcher matcher) -> { return "(?x:#" + matcher.group("comment").replaceAll("\\\\n", "") + "\\n)"; } );
 	}
 	
 	private static final Pattern pWrongWordBoundaries = Pattern.compile(NO_ESCAPE + "\\\\{2}[><]"); 
@@ -308,34 +308,41 @@ public class Main
 		return false;
 	}
 	
-	private static final Pattern pRecursionToNumberedGroup = Pattern.compile(NO_ESCAPE + "\\(\\?(?<groupNumber>\\d+)\\)");
+	private static final Pattern pRecursionToNumberedGroup = Pattern.compile(NO_ESCAPE + "(\\(\\?(?<groupNumber>\\d+)\\)|\\Q(?(\\E(?groupNumber)\\))");
 	private static final Pattern pGroupCounter = Pattern.compile( "^(" + NO_ESCAPE + "(?<capturingGroup>\\((?:\\?\\<[a-zA-Z][a-zA-Z0-9]*\\>|(?!\\?)))|[\\s\\S])*$" );
 	private static boolean containsRecursionToNumberedGroupThatsNotYetDeclared(String regex){
 		Matcher m = pRecursionToNumberedGroup.matcher(regex);
 
 		while(m.find() ){
-			String subregex = regex.substring(0, m.start() );
-			Matcher m2 = pGroupCounter.matcher(subregex);
-			if(! m2.find() ) throw new RuntimeException("The regex should always match!");
-			if( m2.captures("capturingGroup").size() < Integer.parseInt( m.group("groupNumber") ) )
+			if(!isGroupAlreadyDeclared(Integer.parseInt( m.group("groupNumber") ), regex.substring(0, m.start() ) ) )
 				return true;
-			
 		}
 	
 		return false;
 	}
 	
-	private static final Pattern pRecursionToNamedGroup = Pattern.compile(NO_ESCAPE + "\\(\\?(?<groupName>[a-zA-Z][a-zA-Z0-9]*)\\)");
+	
+	private static boolean isGroupAlreadyDeclared(int group, String subregex){
+		Matcher m = pGroupCounter.matcher(subregex);
+		if(! m.find() ) throw new RuntimeException("The regex should always match!");
+		return m.captures("capturingGroup").size() >= group ;
+	}
+	
+	private static final Pattern pRecursionToNamedGroup = Pattern.compile(NO_ESCAPE + "(\\(\\?(?<groupName>[a-zA-Z][a-zA-Z0-9]*)\\)|\\Q(?(\\E(?groupName)\\))");
 	private static boolean containsRecursionToNamedGroupThatsNotYetDeclared(String regex){
 		Matcher m = pRecursionToNamedGroup.matcher(regex);
 		
 		while(m.find() ){
-			String subregex = regex.substring(0, m.start() );
-			Pattern p = Pattern.compile(NO_ESCAPE + "\\(\\?\\<"+ m.group("groupName") + "\\>"); 
-			if(! p.matcher(subregex).find() ) return true;
+			if(!isNamedGroupAlreadyDeclared(m.group("groupName"), regex.substring(0, m.start() ) ) ) 
+				return true;
 		}
 		
 		return false;
+	}
+	
+	private static final boolean isNamedGroupAlreadyDeclared(String groupName, String subregex){
+		Pattern p = Pattern.compile(NO_ESCAPE + "\\(\\?\\<"+ groupName + "\\>"); 
+		return p.matcher(subregex).find();
 	}
 	
 	private static final String [] SPECIAL_PATTERNS = new String[]{ "\"[a-Z]+\"", "\"[[:lower:]]+\"", "\"[[:upper:]]+\"", "\"\\\\l+\"","\"\\\\u+\"", "\"a{ 2 , 4 }\"", "\"a{ 2 , }\"", "\"a{ 2 }\"", "\"a{12b\"" };

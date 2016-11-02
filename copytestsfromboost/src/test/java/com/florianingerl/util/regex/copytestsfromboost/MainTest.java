@@ -146,8 +146,8 @@ public class MainTest
 		assertEquals(regex, Main.adaptRegex(regex) ); 
 		regex = "\\\\k<namedGroup>";
 		assertEquals(regex, Main.adaptRegex(regex) ); 
-		regex = "(?(<namedGroup>)condition based on valid group capture)";
-		assertEquals("(?(namedGroup)condition based on valid group capture)", Main.adaptRegex(regex) );
+		regex = "(?<namedGroup>is declared here)(?(<namedGroup>)condition based on valid group capture)";
+		assertEquals("(?<namedGroup>is declared here)(?(namedGroup)condition based on valid group capture)", Main.adaptRegex(regex) );
 		regex = "some free < and > signs";
 		assertEquals("some free \\\\< and \\\\> signs", Main.adaptRegex(regex) );
 	}
@@ -172,10 +172,10 @@ public class MainTest
 	
 	@Test
 	public void test14(){
-		String regex = "(?('groupname')condA|condB)";
-		assertEquals("(?(groupname)condA|condB)", Main.adaptRegex(regex) );
-		regex = "(?(<groupname>)condA|condB)";
-		assertEquals("(?(groupname)condA|condB)", Main.adaptRegex(regex) );
+		String regex = "(?<groupname>is declared here)(?('groupname')condA|condB)";
+		assertEquals("(?<groupname>is declared here)(?(groupname)condA|condB)", Main.adaptRegex(regex) );
+		regex = "(?<groupname>is declared here)(?(<groupname>)condA|condB)";
+		assertEquals("(?<groupname>is declared here)(?(groupname)condA|condB)", Main.adaptRegex(regex) );
 	}
 	
 	@Test
@@ -256,5 +256,13 @@ public class MainTest
 	public void test22(){
 		assertTrue( Main.adaptRegex("\"\\\\l+\"") == null );
 		assertTrue( Main.adaptRegex("\"\\\\u+\"") == null );
+	}
+	
+	@Test
+	public void test23(){
+		String regex = "^(?(2)a|(1)(2))+$";
+		assertTrue( Main.adaptRegex(regex) == null );
+		regex = "^(?(notDeclared)a|(1)(?<notDeclared>2))+$";
+		assertTrue( Main.adaptRegex(regex) == null );
 	}
 }
