@@ -156,6 +156,8 @@ public class MainTest
 	public void test12(){
 		String regex = "(?<someName>hello)(?&someName) and escaped \\\\(?&someName) and not escaped \\\\\\\\(?&someName)";
 		assertEquals("(?<someName>hello)(?someName) and escaped \\\\(?&someName) and not escaped \\\\\\\\(?someName)", Main.adaptRegex(regex) );
+		regex = "(?'abc'a|b)(?<doe>d|e)(?P>abc){2}";
+		assertEquals("(?<abc>a|b)(?<doe>d|e)(?abc){2}", Main.adaptRegex(regex) );
 	}
 	
 	@Test
