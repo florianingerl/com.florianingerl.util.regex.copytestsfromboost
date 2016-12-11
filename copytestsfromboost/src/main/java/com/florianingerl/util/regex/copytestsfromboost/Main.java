@@ -57,7 +57,11 @@ public class Main
 					if(regex == null) continue;
 					sbFunctions.append("\t\tcheck(").append( regex ).append(",");
 					appendOptions( m.group("options"), m.group("otheroptions"), sbFunctions);
-					sbFunctions.append(",").append(m.group("input") ).append(", new int[]{").append( m.group("array") ).append("});\n");
+					String array = m.group("array");
+					if( containsRecursion(regex) ) {
+						array = adaptWrongRecursionGroups(array);
+					}
+					sbFunctions.append(",").append(m.group("input") ).append(", new int[]{").append( array ).append("});\n");
 				}
 				/*
 				Matcher m2 = pInvalidRegex.matcher(functionBody);
@@ -184,6 +188,8 @@ public class Main
 	
 	static String adaptRegex(String regex){
 		if(isSpecialRegex(regex) ) return null;
+		if( regex.contains("(?i:(?1)") ) return null;
+		if( regex.contains("(?:(?<A>a+)|(?<A>b+)") ) return null;
 		if(containsRelativeBackReference(regex) ) return null;
 		if(containsUnsupportedRecursion(regex) ) return null;
 		if(containsUnsupportedConditional(regex) ) return null;
@@ -240,7 +246,8 @@ public class Main
 		String characterClass = "\\[(\\\\{2}.|[^\\]])*\\]";
 		String lookbehind = "\\(\\?\\<[!=]";
 		String independentGroup = "\\Q(?>\\E";
-		pGreaterAndSmallerSigns = Pattern.compile(NO_ESCAPE + "(" + namedGroup + "|" + conditionBasedOnValidGroupCapture + "|" + backReference + "|" + characterClass + "|" + lookbehind + "|" + independentGroup + "|[><])");
+		String recursion = "\\Q(?P>\\E(?groupName)\\)";
+		pGreaterAndSmallerSigns = Pattern.compile(NO_ESCAPE + "(" + namedGroup + "|" + conditionBasedOnValidGroupCapture + "|" + backReference + "|" + characterClass + "|" + lookbehind + "|" + independentGroup + "|" + recursion + "|[><])");
 	}
 	
 	private static String escapeGreaterAndSmallerSigns(String regex){
@@ -255,7 +262,17 @@ public class Main
 			} );
 	}
 	
-	private static final Pattern pWrongRecursion = Pattern.compile(NO_ESCAPE + "\\(\\?&(?<groupName>[a-zA-Z][a-zA-Z0-9]*)\\)");
+	private static final Pattern pRecursion = Pattern.compile(NO_ESCAPE + "\\(\\?([a-zA-Z][a-zA-Z0-9]*|\\d+)\\)");
+	private static boolean containsRecursion(String regex){
+		return pRecursion.matcher(regex).find();
+	}
+	
+	private static final Pattern pWrongRecursionGroups = Pattern.compile("(\\d+\\s*,\\s*\\d+\\s*,)([\\s\\S]*?)(-\\s*2)");
+	private static String adaptWrongRecursionGroups(String array){
+		return pWrongRecursionGroups.matcher(array).replaceAll("$1$3");
+	}
+	
+	private static final Pattern pWrongRecursion = Pattern.compile(NO_ESCAPE + "\\(\\?(&|P\\>)(?<groupName>[a-zA-Z][a-zA-Z0-9]*)\\)");
 	private static String adaptWrongRecursion(String regex){
 		return pWrongRecursion.matcher(regex).replaceAll("(?${groupName})");
 	}
