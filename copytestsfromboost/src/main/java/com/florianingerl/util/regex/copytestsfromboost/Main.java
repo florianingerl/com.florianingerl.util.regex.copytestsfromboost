@@ -116,7 +116,7 @@ public class Main
 			sb.append("|Pattern.CASE_INSENSITIVE");
 		if( !options.contains("no_mod_m") )
 			sb.append("|Pattern.MULTILINE");
-		if( !options.contains("no_mod_s") && (otherOptions == null || !otherOptions.contains("match_not_dot_newline") ) )
+		if( options.contains("mod_s") || ( !options.contains("no_mod_s") && (otherOptions == null || !otherOptions.contains("match_not_dot_newline") ) ) )
 			sb.append("|Pattern.DOTALL");
 		if(options.contains("mod_x") )
 			sb.append("|Pattern.COMMENTS");
@@ -194,6 +194,9 @@ public class Main
 		if(containsUnsupportedRecursion(regex) ) return null;
 		if(containsUnsupportedConditional(regex) ) return null;
 		if(containsBranchReset(regex) ) return null;
+		if(regex.equals("\"^\\\\W*(?:((.)\\\\W*(?1)\\\\W*\\\\2|)|((.)\\\\W*(?3)\\\\W*\\\\4|\\\\W*.\\\\W*))\\\\W*$\"") ){
+			return "\"^\\\\W*(?:((.)\\\\W*(?1)\\\\W*(?<-2>\\\\2)|)|((.)\\\\W*(?3)\\\\W*(?<-4>\\\\4)|\\\\W*.\\\\W*))\\\\W*$\"";
+		}
 		regex = adaptWrongBackReferences(regex);
 		regex = adaptWrongNamedGroups(regex);
 		regex = adaptWrongCommentaries(regex);
@@ -362,7 +365,7 @@ public class Main
 		return p.matcher(subregex).find();
 	}
 	
-	private static final String [] SPECIAL_PATTERNS = new String[]{ "\"[a-Z]+\"", "\"[[:lower:]]+\"", "\"[[:upper:]]+\"", "\"\\\\l+\"","\"\\\\u+\"", "\"a{ 2 , 4 }\"", "\"a{ 2 , }\"", "\"a{ 2 }\"", "\"a{12b\"" };
+	private static final String [] SPECIAL_PATTERNS = new String[]{ "\"^a (?#xxx) (?#yyy) {3}c\"", "\"^   a\\\\ b[c ]d       $\"", "\"((?-i)[[:lower:]])[[:lower:]]\"", "\"^\"", "\"\\\\b\"", "\"[a-Z]+\"", "\"[[:lower:]]+\"", "\"[[:upper:]]+\"", "\"\\\\l+\"","\"\\\\u+\"", "\"a{ 2 , 4 }\"", "\"a{ 2 , }\"", "\"a{ 2 }\"", "\"a{12b\"" };
 	
 	private static boolean isSpecialRegex(String regex){
 		for(int i=0; i < SPECIAL_PATTERNS.length; ++i){
