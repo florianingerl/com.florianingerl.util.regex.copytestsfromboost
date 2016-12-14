@@ -110,13 +110,14 @@ public class Main
 		}
     }
 	
+	private static final Pattern pModS = Pattern.compile("(?<!no_)mod_s");
 	private static void appendOptions(String options, String otherOptions, StringBuilder sb){
 		sb.append("0");
 		if(  options.contains("icase") )
 			sb.append("|Pattern.CASE_INSENSITIVE");
 		if( !options.contains("no_mod_m") )
 			sb.append("|Pattern.MULTILINE");
-		if( options.contains("mod_s") || ( !options.contains("no_mod_s") && (otherOptions == null || !otherOptions.contains("match_not_dot_newline") ) ) )
+		if( pModS.matcher(options).find() || ( !options.contains("no_mod_s") && (otherOptions == null || !otherOptions.contains("match_not_dot_newline") ) ) )
 			sb.append("|Pattern.DOTALL");
 		if(options.contains("mod_x") )
 			sb.append("|Pattern.COMMENTS");
@@ -365,7 +366,7 @@ public class Main
 		return p.matcher(subregex).find();
 	}
 	
-	private static final String [] SPECIAL_PATTERNS = new String[]{ "\"^a (?#xxx) (?#yyy) {3}c\"", "\"^   a\\\\ b[c ]d       $\"", "\"((?-i)[[:lower:]])[[:lower:]]\"", "\"^\"", "\"\\\\b\"", "\"[a-Z]+\"", "\"[[:lower:]]+\"", "\"[[:upper:]]+\"", "\"\\\\l+\"","\"\\\\u+\"", "\"a{ 2 , 4 }\"", "\"a{ 2 , }\"", "\"a{ 2 }\"", "\"a{12b\"" };
+	private static final String [] SPECIAL_PATTERNS = new String[]{ "\"\\\\b\"","\"^a (?#xxx) (?#yyy) {3}c\"", "\"^   a\\\\ b[c ]d       $\"", "\"((?-i)[[:lower:]])[[:lower:]]\"", "\"^\"", "\"\\\\<\"", "\"[a-Z]+\"", "\"[[:lower:]]+\"", "\"[[:upper:]]+\"", "\"\\\\l+\"","\"\\\\u+\"", "\"a{ 2 , 4 }\"", "\"a{ 2 , }\"", "\"a{ 2 }\"", "\"a{12b\"" };
 	
 	private static boolean isSpecialRegex(String regex){
 		for(int i=0; i < SPECIAL_PATTERNS.length; ++i){
